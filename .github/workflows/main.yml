@@ -1,0 +1,23 @@
+name: Esteira
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    uses: castinformaticasa/github-workflows/.github/workflows/deploy_demo_dsc.yml@300a1920dae89685823eebcb23584dbe34ffeb53
+    secrets:
+      AWS_REPOSITORY: ${{ secrets.AWS_REPOSITORY }}
+      AWS_REGISTRY_TAG: ${{ secrets.AWS_REGISTRY_TAG }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      CATALOG_GITHUB_TOKEN: ${{ secrets.CATALOG_GITHUB_TOKEN }}
+    with:
+      environment: prd
+      version: latest
+      department: "DBU"
+      application: "dsc"
+      project-name: "defeitos-aco-laminado"

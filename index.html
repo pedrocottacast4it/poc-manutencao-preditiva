@@ -1,0 +1,1828 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="favicon.ico" type="image/x-icon" />
+    <title>Manutenção Preditiva — Demonstração</title>
+    <script src="vendor/chart.umd.min.js"></script>
+    <style>
+      /* ── Reset & base ── */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        background: #111827;
+        color: #1f2937;
+        height: 100dvh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      button {
+        font: inherit;
+        cursor: pointer;
+      }
+      img {
+        display: block;
+        max-width: 100%;
+      }
+
+      /* ── Navbar ── */
+      .demo-page-navbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 24px;
+        background: #ffffff;
+        border-bottom: 1px solid #d1d5db;
+        flex-shrink: 0;
+      }
+      .demo-page-navbar__brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+      }
+      .demo-page-navbar__toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: #9ca3af;
+        flex-shrink: 0;
+        transition: color 0.15s;
+      }
+      .demo-page-navbar__toggle:hover {
+        color: #4b5563;
+      }
+      .demo-page-navbar__toggle svg {
+        transition: transform 0.2s ease;
+      }
+      .demo-page-navbar__toggle[aria-expanded="false"] svg {
+        transform: rotate(180deg);
+      }
+      .demo-page-navbar__toggle:focus-visible {
+        outline: 2px solid #7c5cfc;
+        outline-offset: 2px;
+      }
+      .demo-page-navbar__logo {
+        height: 32px;
+        width: auto;
+        object-fit: contain;
+      }
+      .demo-page-navbar__title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #b91c1c;
+        letter-spacing: 0.04em;
+        text-align: right;
+      }
+
+      /* ── Shell ── */
+      .demo-page-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+      }
+      .demo-page-body {
+        position: relative;
+        flex: 1;
+        display: flex;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      /* ── Sidebar (config) ── */
+      .demo-page-sidebar {
+        width: 300px;
+        min-width: 300px;
+        background: #f3f4f6;
+        border-right: 1px solid #d1d5db;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        min-height: 0;
+        transition:
+          width 0.2s ease,
+          min-width 0.2s ease,
+          border-color 0.2s ease;
+      }
+      .demo-page-body.is-sidebar-collapsed .demo-page-sidebar {
+        width: 0;
+        min-width: 0;
+        border-right-width: 0;
+        visibility: hidden;
+      }
+      .demo-page-sidebar__header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 16px;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1f2937;
+        background: #eceff3;
+        border-bottom: 1px solid #d1d5db;
+        flex-shrink: 0;
+      }
+      .demo-page-sidebar__header svg {
+        color: #7c5cfc;
+      }
+      .demo-page-sidebar__body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px 16px 16px;
+      }
+      .config-section {
+        margin-bottom: 20px;
+      }
+      .config-section-title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 12px 0;
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #4b5563;
+      }
+      .config-group {
+        margin-bottom: 12px;
+      }
+      .config-label {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        color: #4b5563;
+      }
+      .config-label output {
+        font-family: "JetBrains Mono", Consolas, monospace;
+        color: #1f2937;
+        font-weight: 600;
+      }
+      .config-hint {
+        display: block;
+        margin-top: 4px;
+        font-size: 11px;
+        color: #6b7280;
+        line-height: 1.4;
+      }
+      .config-color-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        background: #fff;
+        border: 1px solid #d1d5db;
+      }
+      .config-color-input {
+        width: 32px;
+        height: 32px;
+        border: none;
+        padding: 0;
+        background: transparent;
+        cursor: pointer;
+      }
+      .config-color-hex {
+        font-family: "JetBrains Mono", Consolas, monospace;
+        font-size: 12px;
+        color: #374151;
+        text-transform: uppercase;
+      }
+      .config-text-input {
+        width: 100%;
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        background: #fff;
+        color: #1f2937;
+        font-size: 13px;
+        outline: none;
+      }
+      .config-text-input:focus {
+        border-color: #7c5cfc;
+      }
+      .config-range {
+        width: 100%;
+        accent-color: var(--primary, #7e30a3);
+      }
+      .config-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .config-btn {
+        flex-shrink: 0;
+        padding: 7px 12px;
+        border-radius: 8px;
+        border: 1px solid #7c5cfc;
+        background: #fff;
+        color: #7c5cfc;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .config-btn:hover {
+        background: #7c5cfc;
+        color: #fff;
+      }
+      .config-file-input {
+        display: none;
+      }
+      .config-upload-btn {
+        display: block;
+        width: 100%;
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px dashed #7c5cfc;
+        background: #fff;
+        color: #7c5cfc;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        text-align: center;
+        transition:
+          background 0.15s,
+          color 0.15s;
+      }
+      .config-upload-btn:hover {
+        background: #7c5cfc;
+        color: #fff;
+      }
+      .config-logo-preview {
+        margin-top: 8px;
+        padding: 10px;
+        border-radius: 8px;
+        background: #fff;
+        border: 1px solid #d1d5db;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 52px;
+      }
+      .config-logo-preview img {
+        max-height: 40px;
+        width: auto;
+        object-fit: contain;
+      }
+      .config-logo-filename {
+        display: block;
+        margin-top: 6px;
+        font-size: 11px;
+        color: #6b7280;
+        word-break: break-all;
+      }
+
+      /* ── Content area ── */
+      .demo-page-content {
+        flex: 1;
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        background: #1f2937;
+        overflow: auto;
+      }
+
+      /* ── App PdM ── */
+      .pdm-app {
+        --primary: #7e30a3;
+        --secondary: #3c2ab5;
+        --critico: #b91c1c;
+        --atencao: #b45309;
+        --normal: #15803d;
+        --muted: #6b7280;
+        --line: #e5e7eb;
+        flex: 1;
+        width: 100%;
+        min-height: 0;
+        padding: 16px 20px 24px;
+        background: #f9fafb;
+      }
+      .pdm-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .pdm-head h1 {
+        font-size: 1.3rem;
+        color: #111827;
+      }
+      .pdm-head p {
+        font-size: 0.85rem;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+      .pdm-tabs {
+        display: flex;
+        gap: 4px;
+        padding: 4px;
+        border-radius: 10px;
+        background: #eef0f4;
+        overflow-x: auto;
+      }
+      .pdm-tab {
+        border: none;
+        background: transparent;
+        padding: 7px 14px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #4b5563;
+        white-space: nowrap;
+      }
+      .pdm-tab[aria-selected="true"] {
+        background: #fff;
+        color: var(--primary);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+      }
+      .pdm-notice {
+        margin-bottom: 14px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid #e9d5ff;
+        background: #faf5ff;
+        font-size: 0.78rem;
+        color: #581c87;
+        line-height: 1.45;
+      }
+      .pdm-panel {
+        display: none;
+      }
+      .pdm-panel--active {
+        display: block;
+      }
+      .pdm-grid {
+        display: grid;
+        gap: 14px;
+      }
+      .pdm-grid--kpi {
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        margin-bottom: 14px;
+      }
+      .pdm-grid--2 {
+        grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+        margin-bottom: 14px;
+      }
+      .pdm-card {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px 16px;
+        min-width: 0;
+      }
+      .pdm-card h2 {
+        font-size: 0.95rem;
+        color: #111827;
+        margin-bottom: 2px;
+      }
+      .pdm-card__sub {
+        font-size: 0.78rem;
+        color: var(--muted);
+        margin-bottom: 10px;
+        line-height: 1.45;
+      }
+      .pdm-card__head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .pdm-kpi__label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .pdm-kpi__value {
+        font-size: 1.7rem;
+        font-weight: 700;
+        color: #111827;
+        margin-top: 4px;
+        font-variant-numeric: tabular-nums;
+      }
+      .pdm-kpi__value small {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--muted);
+      }
+      .pdm-kpi__foot {
+        font-size: 0.75rem;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+      .pdm-chart {
+        position: relative;
+        height: 280px;
+      }
+      .pdm-chart--sm {
+        height: 220px;
+      }
+
+      /* Tabela da frota */
+      .pdm-table-wrap {
+        overflow-x: auto;
+      }
+      .pdm-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.83rem;
+        font-variant-numeric: tabular-nums;
+      }
+      .pdm-table th {
+        text-align: left;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line);
+        white-space: nowrap;
+      }
+      .pdm-table td {
+        padding: 8px 10px;
+        border-bottom: 1px solid #f1f2f4;
+        white-space: nowrap;
+      }
+      .pdm-table tbody tr {
+        cursor: pointer;
+      }
+      .pdm-table tbody tr:hover {
+        background: #faf5ff;
+      }
+      .pdm-table .num {
+        text-align: right;
+      }
+      .pdm-table .muted {
+        color: var(--muted);
+      }
+      .pdm-truth {
+        display: none;
+      }
+      .show-truth .pdm-truth {
+        display: table-cell;
+      }
+      .pdm-prob {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 130px;
+      }
+      .pdm-prob__bar {
+        flex: 1;
+        height: 6px;
+        border-radius: 3px;
+        background: #f1f2f4;
+        overflow: hidden;
+      }
+      .pdm-prob__bar span {
+        display: block;
+        height: 100%;
+      }
+      .pdm-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+      }
+      .pdm-badge--critico {
+        background: #fee2e2;
+        color: var(--critico);
+      }
+      .pdm-badge--atencao {
+        background: #fef3c7;
+        color: var(--atencao);
+      }
+      .pdm-badge--normal {
+        background: #dcfce7;
+        color: var(--normal);
+      }
+      .pdm-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+      .pdm-switch {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.8rem;
+        color: #374151;
+        cursor: pointer;
+      }
+      .pdm-switch input {
+        accent-color: var(--primary);
+      }
+      .pdm-filter {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .pdm-chip {
+        border: 1px solid var(--line);
+        background: #fff;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 0.78rem;
+        color: #374151;
+      }
+      .pdm-chip[aria-pressed="true"] {
+        border-color: var(--primary);
+        color: var(--primary);
+        background: #faf5ff;
+        font-weight: 600;
+      }
+
+      /* Detalhe do ativo */
+      .pdm-asset-head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        align-items: center;
+      }
+      .pdm-asset-head__id h2 {
+        font-size: 1.2rem;
+      }
+      .pdm-asset-head__id p {
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+      .pdm-stat {
+        min-width: 120px;
+      }
+      .pdm-stat__label {
+        font-size: 0.72rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .pdm-stat__value {
+        font-size: 1.15rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .pdm-stat__value small {
+        font-size: 0.78rem;
+        font-weight: 500;
+        color: var(--muted);
+      }
+      .pdm-select {
+        padding: 5px 8px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: #fff;
+        font-size: 0.8rem;
+        max-width: 220px;
+      }
+
+      /* Validação e impacto */
+      .pdm-compare {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+        font-variant-numeric: tabular-nums;
+      }
+      .pdm-compare th,
+      .pdm-compare td {
+        padding: 8px 6px;
+        border-bottom: 1px solid #f1f2f4;
+        text-align: right;
+      }
+      .pdm-compare th:first-child,
+      .pdm-compare td:first-child {
+        text-align: left;
+      }
+      .pdm-compare th {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+      }
+      .pdm-compare .win {
+        color: var(--normal);
+        font-weight: 700;
+      }
+      .pdm-confusion {
+        display: grid;
+        grid-template-columns: auto 1fr 1fr;
+        gap: 6px;
+        font-size: 0.8rem;
+        align-items: center;
+      }
+      .pdm-confusion .cell {
+        padding: 12px 6px;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: 700;
+        font-size: 1.2rem;
+      }
+      .pdm-confusion .cell small {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 500;
+        color: #374151;
+      }
+      .pdm-confusion .ok {
+        background: #dcfce7;
+      }
+      .pdm-confusion .bad {
+        background: #fee2e2;
+      }
+      .pdm-confusion .hdr {
+        text-align: center;
+        color: var(--muted);
+        font-weight: 600;
+      }
+      .pdm-note {
+        font-size: 0.78rem;
+        color: var(--muted);
+        line-height: 1.5;
+        margin-top: 10px;
+      }
+      .pdm-empty {
+        padding: 40px;
+        text-align: center;
+        color: var(--muted);
+      }
+
+      /* Footer */
+      .demo-page-footer {
+        flex-shrink: 0;
+        padding: 16px;
+        font-size: 0.875rem;
+        color: #fff;
+        background: linear-gradient(to right, #4c23ec, #000);
+      }
+
+      @media (max-width: 900px) {
+        .demo-page-body:not(.is-sidebar-collapsed) .demo-page-sidebar {
+          position: absolute;
+          inset: 0 auto 0 0;
+          z-index: 2;
+          width: min(300px, 85vw);
+          min-width: 0;
+          box-shadow: 4px 0 16px rgba(0, 0, 0, 0.18);
+        }
+        .demo-page-body.is-sidebar-collapsed .demo-page-sidebar {
+          display: none;
+        }
+        .pdm-grid--2 {
+          grid-template-columns: 1fr;
+        }
+        .pdm-app {
+          padding: 12px 12px 20px;
+        }
+        .demo-page-navbar__title {
+          font-size: 0.95rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navbar -->
+    <header class="demo-page-navbar">
+      <div class="demo-page-navbar__brand">
+        <button
+          type="button"
+          class="demo-page-navbar__toggle"
+          id="sidebar-toggle"
+          aria-controls="demo-sidebar"
+          aria-expanded="true"
+          aria-label="Recolher menu lateral"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M15 6l-6 6 6 6" />
+          </svg>
+        </button>
+        <img
+          id="navbar-logo"
+          class="demo-page-navbar__logo"
+          src="logo_cast.png"
+          alt="CAST Logo"
+        />
+      </div>
+      <span class="demo-page-navbar__title">MANUTENÇÃO PREDITIVA</span>
+    </header>
+
+    <main class="demo-page-main">
+      <div class="demo-page-body">
+        <!-- Sidebar: configurações -->
+        <aside
+          id="demo-sidebar"
+          class="demo-page-sidebar"
+          aria-label="Configurações da demonstração"
+        >
+          <div class="demo-page-sidebar__header">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"
+              />
+            </svg>
+            <span>Configurações</span>
+          </div>
+          <div class="demo-page-sidebar__body">
+            <section class="config-section">
+              <h3 class="config-section-title">Regra de alerta</h3>
+              <div class="config-group">
+                <label class="config-label" for="cfg-horizon"
+                  >Horizonte de planejamento
+                  <output id="out-horizon">30 ciclos</output></label
+                >
+                <input
+                  type="range"
+                  id="cfg-horizon"
+                  class="config-range"
+                  min="5"
+                  max="90"
+                  step="5"
+                  value="30"
+                />
+                <span class="config-hint"
+                  >Janela em que o PCM consegue agendar a intervenção.</span
+                >
+              </div>
+              <div class="config-group">
+                <label class="config-label" for="cfg-threshold"
+                  >Limiar crítico <output id="out-threshold">50%</output></label
+                >
+                <input
+                  type="range"
+                  id="cfg-threshold"
+                  class="config-range"
+                  min="10"
+                  max="90"
+                  step="5"
+                  value="50"
+                />
+                <span class="config-hint"
+                  >P(falha no horizonte) a partir da qual o ativo vira
+                  crítico e gera OS.</span
+                >
+              </div>
+              <div class="config-group">
+                <label class="config-label" for="cfg-warn"
+                  >Limiar de atenção <output id="out-warn">20%</output></label
+                >
+                <input
+                  type="range"
+                  id="cfg-warn"
+                  class="config-range"
+                  min="5"
+                  max="85"
+                  step="5"
+                  value="20"
+                />
+              </div>
+            </section>
+
+            <section class="config-section">
+              <h3 class="config-section-title">Replay do ativo</h3>
+              <div class="config-group">
+                <label class="config-label" for="cfg-asset">Ativo</label>
+                <select id="cfg-asset" class="config-text-input"></select>
+              </div>
+              <div class="config-group">
+                <label class="config-label" for="cfg-cycle"
+                  >Ciclo observado <output id="out-cycle">—</output></label
+                >
+                <div class="config-row">
+                  <input
+                    type="range"
+                    id="cfg-cycle"
+                    class="config-range"
+                    min="1"
+                    max="1"
+                    value="1"
+                  />
+                  <button type="button" class="config-btn" id="btn-play">
+                    ▶
+                  </button>
+                </div>
+                <span class="config-hint"
+                  >Volta no tempo e mostra o que o modelo previa em cada ciclo,
+                  usando só o histórico até ali.</span
+                >
+              </div>
+            </section>
+
+            <section class="config-section">
+              <h3 class="config-section-title">Premissas financeiras</h3>
+              <div class="config-group">
+                <label class="config-label" for="cfg-hour-cost"
+                  >Lucro cessante (R$/hora parada)</label
+                >
+                <input
+                  type="number"
+                  id="cfg-hour-cost"
+                  class="config-text-input"
+                  min="0"
+                  step="1000"
+                  value="25000"
+                />
+              </div>
+              <div class="config-group">
+                <label class="config-label" for="cfg-down-hours"
+                  >Horas paradas por falha não planejada</label
+                >
+                <input
+                  type="number"
+                  id="cfg-down-hours"
+                  class="config-text-input"
+                  min="0"
+                  step="1"
+                  value="12"
+                />
+              </div>
+              <div class="config-group">
+                <label class="config-label" for="cfg-repair-cost"
+                  >Custo de reparo planejado (R$)</label
+                >
+                <input
+                  type="number"
+                  id="cfg-repair-cost"
+                  class="config-text-input"
+                  min="0"
+                  step="1000"
+                  value="40000"
+                />
+              </div>
+              <div class="config-group">
+                <label class="config-label" for="cfg-emergency"
+                  >Multiplicador do reparo emergencial
+                  <output id="out-emergency">4,5×</output></label
+                >
+                <input
+                  type="range"
+                  id="cfg-emergency"
+                  class="config-range"
+                  min="1"
+                  max="10"
+                  step="0.5"
+                  value="4.5"
+                />
+                <span class="config-hint"
+                  >Discovery: emergencial custa de 4 a 5× o planejado.</span
+                >
+              </div>
+            </section>
+
+            <section class="config-section">
+              <h3 class="config-section-title">Aparência</h3>
+              <div class="config-group">
+                <label class="config-label" for="color-primary"
+                  >Cor primária</label
+                >
+                <div class="config-color-row">
+                  <input
+                    type="color"
+                    id="color-primary"
+                    class="config-color-input"
+                    value="#7E30A3"
+                  />
+                  <span class="config-color-hex" id="hex-primary">#7E30A3</span>
+                </div>
+              </div>
+            </section>
+
+            <section class="config-section">
+              <h3 class="config-section-title">Marca</h3>
+              <div class="config-group">
+                <label class="config-label" for="app-name"
+                  >Nome do cliente / planta</label
+                >
+                <input
+                  type="text"
+                  id="app-name"
+                  class="config-text-input"
+                  value="Usina Demonstração"
+                  placeholder="Nome exibido no cabeçalho"
+                />
+              </div>
+              <div class="config-group">
+                <span class="config-label">Logo</span>
+                <input
+                  type="file"
+                  id="app-logo"
+                  class="config-file-input"
+                  accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                />
+                <label
+                  for="app-logo"
+                  class="config-upload-btn"
+                  id="app-logo-btn"
+                >
+                  Enviar logo
+                </label>
+                <div class="config-logo-preview">
+                  <img
+                    id="app-logo-preview"
+                    src="logo_cast.png"
+                    alt="Preview da logo"
+                  />
+                </div>
+                <span class="config-logo-filename" id="app-logo-filename"
+                  >logo_cast.png</span
+                >
+              </div>
+            </section>
+          </div>
+        </aside>
+
+        <!-- Área central -->
+        <section class="demo-page-content" aria-label="Painel de manutenção preditiva">
+          <div class="pdm-app" id="app">
+            <div class="pdm-head">
+              <div>
+                <h1 id="plant-name">Usina Demonstração</h1>
+                <p>
+                  Tempo restante de vida útil (RUL) por WTTE-RNN: LSTM com
+                  saída Weibull
+                </p>
+              </div>
+              <div class="pdm-tabs" role="tablist">
+                <button class="pdm-tab" role="tab" data-tab="fleet" aria-selected="true">Frota</button>
+                <button class="pdm-tab" role="tab" data-tab="asset" aria-selected="false">Ativo</button>
+                <button class="pdm-tab" role="tab" data-tab="validation" aria-selected="false">Validação</button>
+                <button class="pdm-tab" role="tab" data-tab="impact" aria-selected="false">Impacto</button>
+              </div>
+            </div>
+
+            <p class="pdm-notice">
+              <strong>Prova de conceito.</strong> Os sinais vêm do dataset
+              público NASA C-MAPSS FD001: 100 ativos com séries de sensores
+              interrompidas antes da falha, cujo RUL real é conhecido. Ele é
+              usado como proxy de degradação de equipamento rotativo. Os nomes
+              de equipamento da usina são ilustrativos, e o tempo é medido em
+              ciclos de operação.
+            </p>
+
+            <!-- Frota -->
+            <div class="pdm-panel pdm-panel--active" data-panel="fleet">
+              <div class="pdm-grid pdm-grid--kpi" id="fleet-kpis"></div>
+              <div class="pdm-card">
+                <div class="pdm-toolbar">
+                  <div>
+                    <h2>Ativos monitorados</h2>
+                    <p class="pdm-card__sub" style="margin: 0">
+                      Ordenados por probabilidade de falha no horizonte. Clique
+                      para abrir o ativo.
+                    </p>
+                  </div>
+                  <div class="config-row">
+                    <div class="pdm-filter" id="fleet-filter">
+                      <button class="pdm-chip" data-filter="all" aria-pressed="true">Todos</button>
+                      <button class="pdm-chip" data-filter="critico" aria-pressed="false">Críticos</button>
+                      <button class="pdm-chip" data-filter="atencao" aria-pressed="false">Atenção</button>
+                    </div>
+                    <label class="pdm-switch"
+                      ><input type="checkbox" id="show-truth" /> RUL real</label
+                    >
+                  </div>
+                </div>
+                <div class="pdm-table-wrap" id="fleet-table-wrap">
+                  <table class="pdm-table">
+                    <thead>
+                      <tr>
+                        <th>Tag</th>
+                        <th>Equipamento</th>
+                        <th class="num">Ciclos</th>
+                        <th class="num">RUL previsto (P50)</th>
+                        <th class="num">Intervalo P10–P90</th>
+                        <th id="th-prob">P(falha ≤ 30)</th>
+                        <th>Status</th>
+                        <th class="num pdm-truth">RUL real</th>
+                      </tr>
+                    </thead>
+                    <tbody id="fleet-rows">
+                      <tr><td colspan="8" class="pdm-empty">Carregando…</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Ativo -->
+            <div class="pdm-panel" data-panel="asset">
+              <div class="pdm-card" style="margin-bottom: 14px">
+                <div class="pdm-asset-head" id="asset-head"></div>
+              </div>
+              <div class="pdm-grid pdm-grid--2">
+                <div class="pdm-card">
+                  <h2>RUL previsto ao longo da vida</h2>
+                  <p class="pdm-card__sub">
+                    Em cada ciclo, a mediana e o intervalo de 80% previstos com
+                    o histórico até ali. A linha tracejada é o RUL real, usado
+                    para validação.
+                  </p>
+                  <div class="pdm-chart"><canvas id="chart-trajectory"></canvas></div>
+                </div>
+                <div class="pdm-card">
+                  <h2>Distribuição de Weibull do tempo até a falha</h2>
+                  <p class="pdm-card__sub" id="curve-sub">
+                    A área sombreada é a probabilidade de falha dentro do
+                    horizonte.
+                  </p>
+                  <div class="pdm-chart"><canvas id="chart-curve"></canvas></div>
+                </div>
+              </div>
+              <div class="pdm-card">
+                <div class="pdm-card__head">
+                  <div>
+                    <h2>Telemetria</h2>
+                    <p class="pdm-card__sub">
+                      Sinal bruto do sensor por ciclo, com média móvel de 10
+                      ciclos.
+                    </p>
+                  </div>
+                  <select id="sensor-select" class="pdm-select" aria-label="Sensor"></select>
+                </div>
+                <div class="pdm-chart pdm-chart--sm"><canvas id="chart-sensor"></canvas></div>
+              </div>
+            </div>
+
+            <!-- Validação -->
+            <div class="pdm-panel" data-panel="validation">
+              <div class="pdm-grid pdm-grid--2">
+                <div class="pdm-card">
+                  <h2>WTTE-RNN × Weibull populacional</h2>
+                  <p class="pdm-card__sub">
+                    Conjunto de teste com 100 ativos nunca vistos no treino. A
+                    linha de base é a curva de Weibull clássica, ajustada só
+                    com os tempos de falha do histórico, sem sensores.
+                  </p>
+                  <table class="pdm-compare" id="compare-table"></table>
+                  <p class="pdm-note">
+                    RMSE com teto de 125 ciclos segue a convenção da literatura
+                    do C-MAPSS: no início da vida, o modelo só consegue dizer
+                    que o ativo está saudável, não quanto falta exatamente.
+                  </p>
+                </div>
+                <div class="pdm-card">
+                  <h2 id="confusion-title">Alertas no horizonte</h2>
+                  <p class="pdm-card__sub" id="confusion-sub"></p>
+                  <div class="pdm-confusion" id="confusion"></div>
+                  <p class="pdm-note" id="confusion-note"></p>
+                </div>
+              </div>
+              <div class="pdm-grid pdm-grid--2">
+                <div class="pdm-card">
+                  <h2>Previsto × real (último ciclo observado)</h2>
+                  <p class="pdm-card__sub">
+                    Cada ponto é um ativo do teste. A diagonal é a previsão
+                    perfeita.
+                  </p>
+                  <div class="pdm-chart"><canvas id="chart-scatter"></canvas></div>
+                </div>
+                <div class="pdm-card">
+                  <h2>Curva de treino</h2>
+                  <p class="pdm-card__sub">
+                    Log-verossimilhança negativa da Weibull discreta com
+                    censura. O treino usa 80 ativos (com cópias censuradas) e a
+                    validação, 20 ativos rodados até a falha.
+                  </p>
+                  <div class="pdm-chart"><canvas id="chart-history"></canvas></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Impacto -->
+            <div class="pdm-panel" data-panel="impact">
+              <div class="pdm-grid pdm-grid--kpi" id="impact-kpis"></div>
+              <div class="pdm-grid pdm-grid--2">
+                <div class="pdm-card">
+                  <h2>Custo por cenário</h2>
+                  <p class="pdm-card__sub" id="impact-sub"></p>
+                  <div class="pdm-chart"><canvas id="chart-impact"></canvas></div>
+                </div>
+                <div class="pdm-card">
+                  <h2>Como a conta é feita</h2>
+                  <table class="pdm-compare" id="impact-table"></table>
+                  <p class="pdm-note">
+                    O cenário reativo trata toda falha como emergencial. No
+                    preditivo, os alertas corretos viram reparo planejado, as
+                    falhas não detectadas continuam emergenciais e os alarmes
+                    falsos contam como intervenção antecipada, pagando o reparo
+                    planejado. Os valores são premissas editáveis na barra
+                    lateral, não dados da usina.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="demo-page-footer">
+      CAST - Copyright 2026 — Todos os direitos reservados.
+    </footer>
+
+    <script>
+      (function () {
+        const app = document.getElementById("app");
+        const $ = (id) => document.getElementById(id);
+
+        const STATUS = {
+          critico: { label: "CRÍTICO", color: "#b91c1c" },
+          atencao: { label: "ATENÇÃO", color: "#b45309" },
+          normal: { label: "NORMAL", color: "#15803d" },
+        };
+
+        const state = {
+          tab: "fleet",
+          filter: "all",
+          fleet: null,
+          validation: null,
+          asset: null,
+          assetId: null,
+          cycle: null,
+          sensor: "s11",
+          charts: {},
+          playTimer: null,
+        };
+
+        const fmt = (v, d = 0) =>
+          Number(v).toLocaleString("pt-BR", {
+            minimumFractionDigits: d,
+            maximumFractionDigits: d,
+          });
+        const pct = (v) => fmt(v * 100, 0) + "%";
+        const brl = (v) =>
+          Number(v).toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+            maximumFractionDigits: 0,
+          });
+        const primary = () =>
+          getComputedStyle(app).getPropertyValue("--primary").trim() || "#7e30a3";
+
+        function params() {
+          return {
+            horizon: Number($("cfg-horizon").value),
+            threshold: Number($("cfg-threshold").value) / 100,
+            warn: Math.min(
+              Number($("cfg-warn").value) / 100,
+              Number($("cfg-threshold").value) / 100 - 0.01,
+            ),
+            hourCost: Number($("cfg-hour-cost").value) || 0,
+            downHours: Number($("cfg-down-hours").value) || 0,
+            repairCost: Number($("cfg-repair-cost").value) || 0,
+            emergency: Number($("cfg-emergency").value),
+          };
+        }
+
+        async function api(path) {
+          const res = await fetch(path);
+          if (!res.ok) throw new Error(`${path} → HTTP ${res.status}`);
+          return res.json();
+        }
+
+        // ── Weibull no cliente (replay sem ida ao backend) ──
+        const wQuantile = (a, b, p) => a * Math.pow(-Math.log(1 - p), 1 / b);
+        const wCdf = (t, a, b) => 1 - Math.exp(-Math.pow(t / a, b));
+        const wPdf = (t, a, b) =>
+          (b / a) * Math.pow(t / a, b - 1) * Math.exp(-Math.pow(t / a, b));
+        function classify(prob) {
+          const p = params();
+          return prob >= p.threshold ? "critico" : prob >= p.warn ? "atencao" : "normal";
+        }
+
+        function chart(id, config) {
+          if (state.charts[id]) state.charts[id].destroy();
+          state.charts[id] = new Chart($(id), config);
+          return state.charts[id];
+        }
+
+        Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+        Chart.defaults.font.size = 11;
+        Chart.defaults.color = "#6b7280";
+        Chart.defaults.plugins.legend.labels.boxWidth = 12;
+        Chart.defaults.animation = false;
+
+        // ── Frota ──
+        function renderFleet() {
+          const p = params();
+          const assets = state.fleet.assets;
+          const counts = { critico: 0, atencao: 0, normal: 0 };
+          assets.forEach((a) => counts[a.status]++);
+          const expected = assets.reduce((s, a) => s + a.prob_failure, 0);
+          const medianRul = [...assets.map((a) => a.rul_p50)].sort((x, y) => x - y)[
+            Math.floor(assets.length / 2)
+          ];
+
+          $("fleet-kpis").innerHTML = `
+            <div class="pdm-card"><div class="pdm-kpi__label">Ativos monitorados</div>
+              <div class="pdm-kpi__value">${assets.length}</div>
+              <div class="pdm-kpi__foot">modo shadow (somente leitura)</div></div>
+            <div class="pdm-card"><div class="pdm-kpi__label">Críticos</div>
+              <div class="pdm-kpi__value" style="color:${STATUS.critico.color}">${counts.critico}</div>
+              <div class="pdm-kpi__foot">P(falha ≤ ${p.horizon}) ≥ ${pct(p.threshold)}</div></div>
+            <div class="pdm-card"><div class="pdm-kpi__label">Em atenção</div>
+              <div class="pdm-kpi__value" style="color:${STATUS.atencao.color}">${counts.atencao}</div>
+              <div class="pdm-kpi__foot">P(falha ≤ ${p.horizon}) ≥ ${pct(p.warn)}</div></div>
+            <div class="pdm-card"><div class="pdm-kpi__label">Falhas esperadas</div>
+              <div class="pdm-kpi__value">${fmt(expected, 1)}</div>
+              <div class="pdm-kpi__foot">soma das probabilidades em ${p.horizon} ciclos</div></div>
+            <div class="pdm-card"><div class="pdm-kpi__label">RUL mediano da frota</div>
+              <div class="pdm-kpi__value">${fmt(medianRul)} <small>ciclos</small></div>
+              <div class="pdm-kpi__foot">P50 por ativo</div></div>`;
+
+          $("th-prob").textContent = `P(falha ≤ ${p.horizon})`;
+          const rows = assets.filter((a) => state.filter === "all" || a.status === state.filter);
+          $("fleet-rows").innerHTML = rows.length
+            ? rows
+                .map((a) => {
+                  const s = STATUS[a.status];
+                  const err = a.rul_p50 - a.true_rul;
+                  return `<tr data-id="${a.id}">
+                    <td><strong>${a.tag}</strong></td>
+                    <td class="muted">${a.type}</td>
+                    <td class="num">${a.cycles_observed}</td>
+                    <td class="num"><strong>${fmt(a.rul_p50)}</strong></td>
+                    <td class="num muted">${fmt(a.rul_p10)} – ${fmt(a.rul_p90)}</td>
+                    <td><div class="pdm-prob"><div class="pdm-prob__bar"><span style="width:${(a.prob_failure * 100).toFixed(1)}%;background:${s.color}"></span></div>${pct(a.prob_failure)}</div></td>
+                    <td><span class="pdm-badge pdm-badge--${a.status}">${s.label}</span></td>
+                    <td class="num pdm-truth">${fmt(a.true_rul)} <span class="muted">(${err >= 0 ? "+" : ""}${fmt(err)})</span></td>
+                  </tr>`;
+                })
+                .join("")
+            : `<tr><td colspan="8" class="pdm-empty">Nenhum ativo nesse filtro.</td></tr>`;
+        }
+
+        // ── Ativo ──
+        function populateAssetSelect() {
+          const sel = $("cfg-asset");
+          const sorted = [...state.fleet.assets].sort((a, b) => a.id - b.id);
+          sel.innerHTML = sorted
+            .map((a) => `<option value="${a.id}">${a.tag} · ${a.type}</option>`)
+            .join("");
+          if (state.assetId) sel.value = state.assetId;
+        }
+
+        async function openAsset(id, switchTab = true) {
+          stopPlay();
+          state.assetId = Number(id);
+          $("cfg-asset").value = state.assetId;
+          const p = params();
+          state.asset = await api(
+            `/api/assets/${state.assetId}?horizon=${p.horizon}&threshold=${p.threshold}&warn=${p.warn}`,
+          );
+          const n = state.asset.trajectory.cycles.length;
+          $("cfg-cycle").max = n;
+          state.cycle = n;
+          $("cfg-cycle").value = n;
+          if (!state.asset.sensors.some((s) => s.key === state.sensor))
+            state.sensor = state.asset.sensors[0].key;
+          $("sensor-select").innerHTML = state.asset.sensors
+            .map((s) => `<option value="${s.key}">${s.key.toUpperCase()} · ${s.label}</option>`)
+            .join("");
+          $("sensor-select").value = state.sensor;
+          if (switchTab) setTab("asset");
+          renderAsset();
+        }
+
+        function assetAt(cycle) {
+          const t = state.asset.trajectory;
+          const i = cycle - 1;
+          const a = t.alpha[i];
+          const b = t.beta[i];
+          const prob = wCdf(params().horizon, a, b);
+          return {
+            alpha: a,
+            beta: b,
+            p50: wQuantile(a, b, 0.5),
+            p10: wQuantile(a, b, 0.1),
+            p90: wQuantile(a, b, 0.9),
+            prob,
+            status: classify(prob),
+            trueRul: t.true_rul[i],
+          };
+        }
+
+        function renderAsset() {
+          if (!state.asset) return;
+          const p = params();
+          const a = state.asset;
+          const cycle = state.cycle;
+          const last = a.trajectory.cycles.length;
+          const now = assetAt(cycle);
+          const s = STATUS[now.status];
+          $("out-cycle").textContent = `${cycle} / ${last}`;
+
+          $("asset-head").innerHTML = `
+            <div class="pdm-asset-head__id"><h2>${a.tag}</h2><p>${a.type} · ciclo ${cycle} de ${last} observados</p></div>
+            <span class="pdm-badge pdm-badge--${now.status}">${s.label}</span>
+            <div class="pdm-stat"><div class="pdm-stat__label">RUL previsto</div>
+              <div class="pdm-stat__value">${fmt(now.p50)} <small>ciclos (P50)</small></div></div>
+            <div class="pdm-stat"><div class="pdm-stat__label">Intervalo 80%</div>
+              <div class="pdm-stat__value">${fmt(now.p10)}–${fmt(now.p90)} <small>ciclos</small></div></div>
+            <div class="pdm-stat"><div class="pdm-stat__label">P(falha ≤ ${p.horizon})</div>
+              <div class="pdm-stat__value" style="color:${s.color}">${pct(now.prob)}</div></div>
+            <div class="pdm-stat"><div class="pdm-stat__label">RUL real</div>
+              <div class="pdm-stat__value">${fmt(now.trueRul)} <small>ciclos</small></div></div>
+            <div class="pdm-stat"><div class="pdm-stat__label">Weibull</div>
+              <div class="pdm-stat__value"><small>α=${fmt(now.alpha, 1)} · β=${fmt(now.beta, 2)}</small></div></div>`;
+
+          // Trajetória do RUL
+          const t = a.trajectory;
+          const upto = (arr) => arr.map((v, i) => (i < cycle ? v : null));
+          chart("chart-trajectory", {
+            type: "line",
+            data: {
+              labels: t.cycles,
+              datasets: [
+                { label: "P90", data: upto(t.rul_p90), borderWidth: 0, pointRadius: 0, fill: false },
+                {
+                  label: "Intervalo 80%",
+                  data: upto(t.rul_p10),
+                  borderWidth: 0,
+                  pointRadius: 0,
+                  backgroundColor: primary() + "26",
+                  fill: "-1",
+                },
+                { label: "RUL previsto (P50)", data: upto(t.rul_p50), borderColor: primary(), borderWidth: 2, pointRadius: 0 },
+                { label: "RUL real", data: t.true_rul, borderColor: "#111827", borderDash: [5, 4], borderWidth: 1.5, pointRadius: 0 },
+                {
+                  label: `Horizonte (${p.horizon})`,
+                  data: t.cycles.map(() => p.horizon),
+                  borderColor: STATUS.critico.color,
+                  borderWidth: 1,
+                  borderDash: [2, 3],
+                  pointRadius: 0,
+                },
+              ],
+            },
+            options: {
+              maintainAspectRatio: false,
+              interaction: { mode: "index", intersect: false },
+              scales: {
+                x: { title: { display: true, text: "ciclo de operação" }, ticks: { maxTicksLimit: 10 } },
+                y: { title: { display: true, text: "RUL (ciclos)" }, min: 0 },
+              },
+              plugins: {
+                legend: { labels: { filter: (i) => i.text !== "P90" } },
+                tooltip: {
+                  filter: (i) => i.dataset.label !== "P90" && i.dataset.label !== "Intervalo 80%",
+                  callbacks: { label: (c) => `${c.dataset.label}: ${fmt(c.parsed.y)}` },
+                },
+              },
+            },
+          });
+
+          // Curva de Weibull no ciclo escolhido
+          const tMax = Math.max(now.p90 * 1.6, p.horizon * 1.5, 20);
+          const grid = Array.from({ length: 121 }, (_, i) => (i * tMax) / 120);
+          const pdf = grid.map((x) => wPdf(Math.max(x, 1e-6), now.alpha, now.beta));
+          const surv = grid.map((x) => 1 - wCdf(x, now.alpha, now.beta));
+          $("curve-sub").textContent =
+            `A área sombreada é a probabilidade de falha em até ${p.horizon} ciclos: ${pct(now.prob)}. A linha tracejada é a probabilidade de o ativo seguir operando.`;
+          chart("chart-curve", {
+            type: "line",
+            data: {
+              labels: grid.map((x) => x.toFixed(0)),
+              datasets: [
+                {
+                  label: "Falha dentro do horizonte",
+                  data: pdf.map((v, i) => (grid[i] <= p.horizon ? v : null)),
+                  borderWidth: 0,
+                  pointRadius: 0,
+                  backgroundColor: STATUS.critico.color + "40",
+                  fill: "origin",
+                },
+                { label: "Densidade de falha", data: pdf, borderColor: primary(), borderWidth: 2, pointRadius: 0, yAxisID: "y" },
+                {
+                  label: "Sobrevivência S(t)",
+                  data: surv,
+                  borderColor: "#6b7280",
+                  borderDash: [5, 4],
+                  borderWidth: 1.5,
+                  pointRadius: 0,
+                  yAxisID: "y1",
+                },
+              ],
+            },
+            options: {
+              maintainAspectRatio: false,
+              interaction: { mode: "index", intersect: false },
+              scales: {
+                x: { title: { display: true, text: "ciclos a partir de agora" }, ticks: { maxTicksLimit: 10 } },
+                y: { title: { display: true, text: "densidade" }, min: 0, ticks: { display: false } },
+                y1: {
+                  position: "right",
+                  min: 0,
+                  max: 1,
+                  grid: { drawOnChartArea: false },
+                  ticks: { callback: (v) => pct(v) },
+                  title: { display: true, text: "sobrevivência" },
+                },
+              },
+              plugins: {
+                tooltip: {
+                  filter: (i) => i.dataset.label === "Sobrevivência S(t)",
+                  callbacks: { label: (c) => `S(t): ${pct(c.parsed.y)}` },
+                },
+              },
+            },
+          });
+
+          renderSensor();
+        }
+
+        function renderSensor() {
+          const sensor = state.asset.sensors.find((s) => s.key === state.sensor);
+          const vals = sensor.values.map((v, i) => (i < state.cycle ? v : null));
+          const ma = vals.map((_, i) => {
+            if (i >= state.cycle) return null;
+            const w = vals.slice(Math.max(0, i - 9), i + 1);
+            return w.reduce((s, v) => s + v, 0) / w.length;
+          });
+          chart("chart-sensor", {
+            type: "line",
+            data: {
+              labels: state.asset.trajectory.cycles,
+              datasets: [
+                { label: "Leitura", data: vals, borderColor: "#9ca3af", borderWidth: 1, pointRadius: 0 },
+                { label: "Média móvel (10)", data: ma, borderColor: primary(), borderWidth: 2, pointRadius: 0 },
+              ],
+            },
+            options: {
+              maintainAspectRatio: false,
+              interaction: { mode: "index", intersect: false },
+              scales: {
+                x: { title: { display: true, text: "ciclo de operação" }, ticks: { maxTicksLimit: 10 } },
+                y: { title: { display: true, text: sensor.label } },
+              },
+            },
+          });
+        }
+
+        // ── Validação ──
+        function renderValidation() {
+          const v = state.validation;
+          const w = v.wtte_rnn;
+          const b = v.weibull_populacional;
+          const row = (label, key, lowerIsBetter, f) => {
+            const better = lowerIsBetter ? w[key] < b[key] : w[key] > b[key];
+            return `<tr><td>${label}</td><td class="${better ? "win" : ""}">${f(w[key])}</td><td>${f(b[key])}</td></tr>`;
+          };
+          $("compare-table").innerHTML = `
+            <thead><tr><th>Métrica (teste)</th><th>WTTE-RNN</th><th>Weibull pop.</th></tr></thead>
+            <tbody>
+              ${row("RMSE (teto 125)", "rmse_cap125", true, (x) => fmt(x, 1))}
+              ${row("RMSE bruto", "rmse", true, (x) => fmt(x, 1))}
+              ${row("Erro médio absoluto", "mae", true, (x) => fmt(x, 1))}
+              <tr><td>Cobertura do intervalo P10–P90</td><td>${pct(w.coverage_p10_p90)}</td><td>${pct(b.coverage_p10_p90)}</td></tr>
+              ${row("Largura média do intervalo", "mean_interval_width", true, (x) => fmt(x, 0))}
+            </tbody>`;
+
+          const al = v.alerts;
+          $("confusion-title").textContent = `Alertas: horizonte de ${al.horizon} ciclos`;
+          $("confusion-sub").textContent = `Alerta quando P(falha ≤ ${al.horizon}) ≥ ${pct(al.threshold)}. A verdade é se o ativo de fato falhou em até ${al.horizon} ciclos.`;
+          $("confusion").innerHTML = `
+            <div></div><div class="hdr">Falhou no horizonte</div><div class="hdr">Não falhou</div>
+            <div class="hdr">Alertou</div>
+            <div class="cell ok">${al.tp}<small>falha antecipada</small></div>
+            <div class="cell bad">${al.fp}<small>alarme falso</small></div>
+            <div class="hdr">Não alertou</div>
+            <div class="cell bad">${al.fn}<small>falha não detectada</small></div>
+            <div class="cell ok">${al.tn}<small>corretamente normal</small></div>`;
+          $("confusion-note").textContent =
+            `Precisão ${al.precision == null ? "—" : pct(al.precision)} · Recall ${al.recall == null ? "—" : pct(al.recall)}. Mova o horizonte e o limiar na barra lateral para ver o trade-off entre alarmes falsos e falhas perdidas.`;
+
+          const maxV = Math.max(...v.scatter.map((s) => Math.max(s.true, Math.min(s.pred, 260))));
+          chart("chart-scatter", {
+            type: "scatter",
+            data: {
+              datasets: [
+                {
+                  label: "Ativos",
+                  data: v.scatter.map((s) => ({ x: s.true, y: s.pred, tag: s.tag })),
+                  backgroundColor: primary() + "aa",
+                  pointRadius: 3.5,
+                },
+                {
+                  type: "line",
+                  label: "Previsão perfeita",
+                  data: [
+                    { x: 0, y: 0 },
+                    { x: maxV, y: maxV },
+                  ],
+                  borderColor: "#9ca3af",
+                  borderDash: [5, 4],
+                  borderWidth: 1,
+                  pointRadius: 0,
+                },
+              ],
+            },
+            options: {
+              maintainAspectRatio: false,
+              scales: {
+                x: { title: { display: true, text: "RUL real (ciclos)" }, min: 0 },
+                y: { title: { display: true, text: "RUL previsto P50 (ciclos)" }, min: 0 },
+              },
+              plugins: {
+                tooltip: {
+                  callbacks: {
+                    label: (c) =>
+                      c.raw.tag ? `${c.raw.tag}: real ${fmt(c.raw.x)} · previsto ${fmt(c.raw.y)}` : "",
+                  },
+                },
+              },
+            },
+          });
+
+          chart("chart-history", {
+            type: "line",
+            data: {
+              labels: v.history.map((h) => h.epoch),
+              datasets: [
+                { label: "Treino", data: v.history.map((h) => h.train_nll), borderColor: primary(), borderWidth: 2, pointRadius: 0 },
+                { label: "Validação", data: v.history.map((h) => h.val_nll), borderColor: "#111827", borderWidth: 1.5, pointRadius: 0 },
+              ],
+            },
+            options: {
+              maintainAspectRatio: false,
+              interaction: { mode: "index", intersect: false },
+              scales: {
+                x: { title: { display: true, text: "época" }, ticks: { maxTicksLimit: 10 } },
+                y: { title: { display: true, text: "NLL" } },
+              },
+            },
+          });
+        }
+
+        // ── Impacto ──
+        function renderImpact() {
+          const p = params();
+          const al = state.validation.alerts;
+          const emergencyCost = p.repairCost * p.emergency + p.downHours * p.hourCost;
+          const failures = al.tp + al.fn;
+          const reactive = failures * emergencyCost;
+          const predictive = al.tp * p.repairCost + al.fn * emergencyCost + al.fp * p.repairCost;
+          const saving = reactive - predictive;
+          const savedHours = al.tp * p.downHours;
+
+          $("impact-kpis").innerHTML = `
+            <div class="pdm-card"><div class="pdm-kpi__label">Economia estimada</div>
+              <div class="pdm-kpi__value" style="color:${saving >= 0 ? STATUS.normal.color : STATUS.critico.color}">${brl(saving)}</div>
+              <div class="pdm-kpi__foot">${reactive ? pct(saving / reactive) : "—"} do custo reativo</div></div>
+            <div class="pdm-card"><div class="pdm-kpi__label">Falhas antecipadas</div>
+              <div class="pdm-kpi__value">${al.tp} <small>de ${failures}</small></div>
+              <div class="pdm-kpi__foot">viram reparo planejado</div></div>
+            <div class="pdm-card"><div class="pdm-kpi__label">Horas de parada evitadas</div>
+              <div class="pdm-kpi__value">${fmt(savedHours)} <small>h</small></div>
+              <div class="pdm-kpi__foot">${brl(savedHours * p.hourCost)} de lucro cessante</div></div>
+            <div class="pdm-card"><div class="pdm-kpi__label">Intervenções antecipadas</div>
+              <div class="pdm-kpi__value">${al.fp}</div>
+              <div class="pdm-kpi__foot">alarmes falsos, pagos como reparo planejado</div></div>`;
+
+          $("impact-sub").textContent = `Os 100 ativos do teste numa janela de ${al.horizon} ciclos, com o desfecho real conhecido: ${failures} falharam dentro dela.`;
+          $("impact-table").innerHTML = `
+            <thead><tr><th>Item</th><th>Reativo</th><th>Preditivo</th></tr></thead>
+            <tbody>
+              <tr><td>Falhas emergenciais × ${brl(emergencyCost)}</td><td>${failures}</td><td>${al.fn}</td></tr>
+              <tr><td>Reparos planejados × ${brl(p.repairCost)}</td><td>0</td><td>${al.tp}</td></tr>
+              <tr><td>Intervenções antecipadas × ${brl(p.repairCost)}</td><td>0</td><td>${al.fp}</td></tr>
+              <tr><td><strong>Total</strong></td><td><strong>${brl(reactive)}</strong></td><td><strong>${brl(predictive)}</strong></td></tr>
+            </tbody>`;
+
+          chart("chart-impact", {
+            type: "bar",
+            data: {
+              labels: ["Reativo", "Preditivo (WTTE-RNN)"],
+              datasets: [
+                {
+                  label: "Reparo",
+                  data: [failures * p.repairCost * p.emergency, (al.tp + al.fp) * p.repairCost + al.fn * p.repairCost * p.emergency],
+                  backgroundColor: primary(),
+                },
+                {
+                  label: "Lucro cessante",
+                  data: [failures * p.downHours * p.hourCost, al.fn * p.downHours * p.hourCost],
+                  backgroundColor: "#d1d5db",
+                },
+              ],
+            },
+            options: {
+              maintainAspectRatio: false,
+              scales: {
+                x: { stacked: true },
+                y: { stacked: true, ticks: { callback: (v) => brl(v) } },
+              },
+              plugins: {
+                tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${brl(c.parsed.y)}` } },
+              },
+            },
+          });
+        }
+
+        // ── Navegação e carga ──
+        function setTab(tab) {
+          state.tab = tab;
+          document.querySelectorAll(".pdm-tab").forEach((el) =>
+            el.setAttribute("aria-selected", String(el.dataset.tab === tab)),
+          );
+          document.querySelectorAll(".pdm-panel").forEach((el) =>
+            el.classList.toggle("pdm-panel--active", el.dataset.panel === tab),
+          );
+          renderCurrent();
+        }
+
+        function renderCurrent() {
+          if (state.tab === "fleet" && state.fleet) renderFleet();
+          if (state.tab === "asset") renderAsset();
+          if (state.tab === "validation" && state.validation) renderValidation();
+          if (state.tab === "impact" && state.validation) renderImpact();
+        }
+
+        let reloadTimer = null;
+        async function reload() {
+          const p = params();
+          const q = `horizon=${p.horizon}&threshold=${p.threshold}&warn=${p.warn}`;
+          try {
+            [state.fleet, state.validation] = await Promise.all([
+              api(`/api/fleet?${q}`),
+              api(`/api/validation?horizon=${p.horizon}&threshold=${p.threshold}`),
+            ]);
+          } catch (e) {
+            $("fleet-rows").innerHTML = `<tr><td colspan="8" class="pdm-empty">Falha ao consultar a API: ${e.message}</td></tr>`;
+            return;
+          }
+          if (!state.assetId) {
+            populateAssetSelect();
+            await openAsset(state.fleet.assets[0].id, false);
+          }
+          renderCurrent();
+        }
+        function scheduleReload() {
+          clearTimeout(reloadTimer);
+          reloadTimer = setTimeout(reload, 150);
+        }
+
+        function stopPlay() {
+          clearInterval(state.playTimer);
+          state.playTimer = null;
+          $("btn-play").textContent = "▶";
+        }
+
+        document.querySelectorAll(".pdm-tab").forEach((btn) =>
+          btn.addEventListener("click", () => setTab(btn.dataset.tab)),
+        );
+        $("fleet-rows").addEventListener("click", (e) => {
+          const tr = e.target.closest("tr[data-id]");
+          if (tr) openAsset(tr.dataset.id);
+        });
+        $("fleet-filter").addEventListener("click", (e) => {
+          const chip = e.target.closest("[data-filter]");
+          if (!chip) return;
+          state.filter = chip.dataset.filter;
+          document
+            .querySelectorAll("#fleet-filter .pdm-chip")
+            .forEach((c) => c.setAttribute("aria-pressed", String(c === chip)));
+          renderFleet();
+        });
+        $("show-truth").addEventListener("change", (e) =>
+          $("fleet-table-wrap").classList.toggle("show-truth", e.target.checked),
+        );
+
+        function bindRange(id, outId, format, onChange) {
+          const el = $(id);
+          const out = $(outId);
+          const update = () => {
+            out.textContent = format(Number(el.value));
+            onChange();
+          };
+          el.addEventListener("input", update);
+          out.textContent = format(Number(el.value));
+        }
+        bindRange("cfg-horizon", "out-horizon", (v) => `${v} ciclos`, scheduleReload);
+        bindRange("cfg-threshold", "out-threshold", (v) => `${v}%`, scheduleReload);
+        bindRange("cfg-warn", "out-warn", (v) => `${v}%`, scheduleReload);
+        bindRange("cfg-emergency", "out-emergency", (v) => `${fmt(v, 1)}×`, renderCurrent);
+        ["cfg-hour-cost", "cfg-down-hours", "cfg-repair-cost"].forEach((id) =>
+          $(id).addEventListener("input", renderCurrent),
+        );
+
+        $("cfg-asset").addEventListener("change", (e) => openAsset(e.target.value));
+        $("cfg-cycle").addEventListener("input", (e) => {
+          stopPlay();
+          state.cycle = Number(e.target.value);
+          if (state.tab !== "asset") setTab("asset");
+          else renderAsset();
+        });
+        $("btn-play").addEventListener("click", () => {
+          if (state.playTimer) return stopPlay();
+          if (!state.asset) return;
+          const last = state.asset.trajectory.cycles.length;
+          if (state.cycle >= last) state.cycle = 1;
+          setTab("asset");
+          $("btn-play").textContent = "❚❚";
+          state.playTimer = setInterval(() => {
+            state.cycle = Math.min(state.cycle + 2, last);
+            $("cfg-cycle").value = state.cycle;
+            renderAsset();
+            if (state.cycle >= last) stopPlay();
+          }, 80);
+        });
+        $("sensor-select").addEventListener("change", (e) => {
+          state.sensor = e.target.value;
+          renderSensor();
+        });
+
+        // ── Template: menu lateral, cor, nome e logo ──
+        const pageBody = document.querySelector(".demo-page-body");
+        const sidebar = $("demo-sidebar");
+        const sidebarToggle = $("sidebar-toggle");
+        const sidebarQuery = window.matchMedia("(max-width: 900px)");
+
+        function setSidebarCollapsed(collapsed) {
+          pageBody.classList.toggle("is-sidebar-collapsed", collapsed);
+          sidebar.inert = collapsed;
+          sidebar.setAttribute("aria-hidden", collapsed ? "true" : "false");
+          sidebarToggle.setAttribute("aria-expanded", String(!collapsed));
+          sidebarToggle.setAttribute(
+            "aria-label",
+            collapsed ? "Abrir menu lateral" : "Recolher menu lateral",
+          );
+          // Os gráficos precisam recalcular a largura depois da transição.
+          setTimeout(() => Object.values(state.charts).forEach((c) => c.resize()), 220);
+        }
+        sidebarToggle.addEventListener("click", () =>
+          setSidebarCollapsed(!pageBody.classList.contains("is-sidebar-collapsed")),
+        );
+        setSidebarCollapsed(sidebarQuery.matches);
+        sidebarQuery.addEventListener("change", (e) => setSidebarCollapsed(e.matches));
+
+        $("color-primary").addEventListener("input", (e) => {
+          app.style.setProperty("--primary", e.target.value);
+          $("hex-primary").textContent = e.target.value.toUpperCase();
+          renderCurrent();
+        });
+
+        $("app-name").addEventListener("input", (e) => {
+          $("plant-name").textContent = e.target.value || "Usina Demonstração";
+        });
+
+        let logoObjectUrl = null;
+        $("app-logo").addEventListener("change", () => {
+          const file = $("app-logo").files?.[0];
+          if (!file || !file.type.startsWith("image/")) return;
+          if (logoObjectUrl) URL.revokeObjectURL(logoObjectUrl);
+          logoObjectUrl = URL.createObjectURL(file);
+          $("navbar-logo").src = logoObjectUrl;
+          $("app-logo-preview").src = logoObjectUrl;
+          $("app-logo-filename").textContent = file.name;
+        });
+
+        reload();
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "manutencao-preditiva",
+  "version": "0.3.0",
+  "description": "PoC de manutenção preditiva com WTTE-RNN (LSTM + Weibull)",
+  "dependencies": {
+    "@primer/css": "17.0.1"
+  },
+  "license": "MIT"
+}

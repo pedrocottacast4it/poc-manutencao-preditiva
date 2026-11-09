@@ -1,0 +1,10 @@
+.git
+.github
+README.md
+**/__pycache__
+**/*.pyc
+.env
+.env.*
+!.env.example
+ml/.venv
+data/cmapss/train_FD001.txt
